@@ -11,35 +11,40 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.Toast;
 
-import com.ahmadarif.imageprocessing.process.BitmapScaler;
-import com.ahmadarif.imageprocessing.process.ImageProcessing;
+import com.ahmadarif.imageprocessing.process.basic.ImageProcessing;
+import com.ahmadarif.imageprocessing.process.chaincode.ChainCode;
+import com.ahmadarif.imageprocessing.process.chaincode.ChainCodeResult;
+import com.ahmadarif.imageprocessing.process.matcher.Matcher;
+import com.ahmadarif.imageprocessing.process.mathscanner.MathScanner;
+import com.ahmadarif.imageprocessing.process.thinning.ZhangSuenThinning;
+import com.ahmadarif.imageprocessing.process.utils.BitmapScaler;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import io.realm.Realm;
 
 public class MainActivity extends AppCompatActivity {
 
     private Context mContext = this;
 
-    @BindView(R.id.btnGray1) Button b1;
-    @BindView(R.id.btnGray2) Button b2;
-    @BindView(R.id.btnTresh) Button b3;
-    @BindView(R.id.btnCountColor) Button b4;
-    @BindView(R.id.btnGreen) Button b5;
-    @BindView(R.id.btnBlue) Button b6;
+    @BindView(R.id.btnBasicImageProcessing) Button btnBasicImageProcessing;
+    @BindView(R.id.btnReset) Button btnReset;
     @BindView(R.id.imageView) ImageView imageView;
+    @BindView(R.id.txtChainCode) EditText txtChainCode;
 
     private Bitmap bmpOriginal;
     private Bitmap bmpLast;
@@ -60,19 +65,38 @@ public class MainActivity extends AppCompatActivity {
         bmpOriginal = bmpDrawable.getBitmap();
         bmpLast = Bitmap.createBitmap(bmpOriginal);
 
-        Toast.makeText(mContext, "Size = " + bmpOriginal.getWidth() + " x " + bmpOriginal.getHeight(), Toast.LENGTH_SHORT).show();
+        // Initialize Realm
+        Realm.init(mContext);
     }
 
-    @OnClick({R.id.btnGray1, R.id.btnGray2, R.id.btnTresh, R.id.btnCountColor, R.id.btnGreen, R.id.btnBlue, R.id.btnReset})
-    void convertColor(final View view) {
-        if (view.getId() == R.id.btnBlue) {
-            Intent intent = new Intent(mContext, ChartActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(intent);
+    @OnClick(R.id.btnBasicImageProcessing)
+    void btnBasicImageProcClicked() {
+        final CharSequence colors[] = new CharSequence[] {"Grayscale", "Treshold", "Number of Colors", "Chain Code", "Thinning"};
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Choose");
+        builder.setItems(colors, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if (which == 0 || which == 1 || which == 2)
+                    new BasicAsync(which).execute(bmpOriginal);
+                else if (which == 3)
+                    new ChainCodeAsync().execute(bmpOriginal);
+                else if (which == 4)
+                    new ThinningAsync().execute(bmpOriginal);
+            }
+        });
+        builder.show();
+    }
 
-            return;
-        }
-        new ProccessAsync(view.getId()).execute(bmpOriginal);
+    @OnClick(R.id.btnMath)
+    void btnMathClick() {
+        new MathAsync().execute(bmpOriginal);
+    }
+
+    @OnClick(R.id.btnReset)
+    void btnResetImageClick() {
+        bmpLast = Bitmap.createBitmap(bmpOriginal);
+        setDisplay(bmpLast);
     }
 
     @OnClick(R.id.imageView)
@@ -85,6 +109,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
+            txtChainCode.setVisibility(View.GONE);
+
             if (requestCode == SELECT_PICTURE) {
                 // Get the url from data
                 Uri selectedImageUri = data.getData();
@@ -96,25 +122,19 @@ public class MainActivity extends AppCompatActivity {
 
                     // change bitmap status
                     bmpOriginal = BitmapFactory.decodeFile(path);
-                    if (bmpOriginal.getWidth() < bmpOriginal.getHeight()) {
-                        bmpOriginal = BitmapScaler.scaleToFitWidth(bmpOriginal, SCALE_WIDTH);
-                    } else {
-                        bmpOriginal = BitmapScaler.scaleToFitWidth(bmpOriginal, SCALE_HEIGHT);
-                    }
                     bmpLast = Bitmap.createBitmap(bmpOriginal);
-                    imageView.setImageBitmap(bmpOriginal);
-
-                    Toast.makeText(mContext, "Size = " + bmpOriginal.getWidth() + " x " + bmpOriginal.getHeight(), Toast.LENGTH_SHORT).show();
+                    setDisplay(bmpOriginal);
                 }
             }
         }
     }
 
     /* Get the real path from the URI */
-    public String getPathFromURI(Uri contentUri) {
+    private String getPathFromURI(Uri contentUri) {
         String res = null;
         String[] proj = {MediaStore.Images.Media.DATA};
         Cursor cursor = getContentResolver().query(contentUri, proj, null, null, null);
+        assert cursor != null;
         if (cursor.moveToFirst()) {
             int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
             res = cursor.getString(column_index);
@@ -123,16 +143,26 @@ public class MainActivity extends AppCompatActivity {
         return res;
     }
 
-    class ProccessAsync extends AsyncTask<Bitmap, Void, Bitmap> {
+    private void setDisplay(Bitmap bmp) {
+        Bitmap bmpDisplay;
+        if (bmp.getWidth() < bmp.getHeight()) {
+            bmpDisplay = BitmapScaler.scaleToFitWidth(bmp, SCALE_WIDTH);
+        } else {
+            bmpDisplay = BitmapScaler.scaleToFitWidth(bmp, SCALE_HEIGHT);
+        }
+        imageView.setImageBitmap(bmpDisplay);
+    }
+
+    class BasicAsync extends AsyncTask<Bitmap, Void, Bitmap> {
 
         private ProgressDialog dialog;
 
-        private int btnId;
+        private int optionIndex;
         private Map<Integer, Integer> colors;
 
         // bisa custom passing parameter
-        public ProccessAsync(int btnId) {
-            this.btnId = btnId;
+        BasicAsync(int optionIndex) {
+            this.optionIndex = optionIndex;
         }
 
         @Override
@@ -151,28 +181,16 @@ public class MainActivity extends AppCompatActivity {
             /* algoritma */
 
             // proses sesuai dengan id tombol tombol yang ditekan
-            switch (btnId) {
-                case R.id.btnGray1:
-                    result = ImageProcessing.grayscale(params[0], 1);
+            switch (optionIndex) {
+                case 0:
+                    result = ImageProcessing.grayscale(params[0]);
                     break;
-                case R.id.btnGray2:
-                    result = ImageProcessing.grayscale(params[0], 2);
-                    break;
-                case R.id.btnTresh:
+                case 1:
                     result = ImageProcessing.treshold(params[0]);
                     break;
-                case R.id.btnCountColor:
+                case 2:
                     colors = ImageProcessing.countColor(bmpLast);
                     result = Bitmap.createBitmap(bmpLast);
-                    break;
-                case R.id.btnGreen :
-                    result = ImageProcessing.convertToGreen(params[0]);
-                    break;
-                case R.id.btnBlue :
-                    result = ImageProcessing.convertToBlue(params[0]);
-                    break;
-                case R.id.btnReset :
-                    result = Bitmap.createBitmap(bmpOriginal);
                     break;
             }
 
@@ -182,10 +200,10 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Bitmap bitmap) {
             bmpLast = Bitmap.createBitmap(bitmap);
-            imageView.setImageBitmap(bmpLast);
+            setDisplay(bmpLast);
             dialog.dismiss();
 
-            if (btnId == R.id.btnCountColor) {
+            if (optionIndex == 2) {
                 new AlertDialog.Builder(mContext)
                     .setTitle("Status")
                     .setMessage("Color count = " + colors.size())
@@ -203,6 +221,125 @@ public class MainActivity extends AppCompatActivity {
                     })
                     .show();
             }
+
+            txtChainCode.setVisibility(View.GONE);
+        }
+    }
+
+    class ChainCodeAsync extends AsyncTask<Bitmap, Void, ChainCodeResult> {
+
+        private ProgressDialog dialog;
+
+        @Override
+        protected void onPreExecute() {
+            dialog = new ProgressDialog(mContext);
+            dialog.setMessage("Processing...");
+            dialog.setCancelable(false);
+            dialog.show();
+        }
+
+        @Override
+        protected ChainCodeResult doInBackground(Bitmap... params) {
+            return ChainCode.singleObject(params[0]);
+        }
+
+        @Override
+        protected void onPostExecute(ChainCodeResult results) {
+            dialog.dismiss();
+
+            if (results.dir.size() > 0) {
+                txtChainCode.setText(results.toString());
+                txtChainCode.setVisibility(View.VISIBLE);
+                setTitle(Matcher.process(results.toString()));
+            } else {
+                Log.i(TAG, "NULL GAN");
+            }
+        }
+    }
+
+    class ThinningAsync extends AsyncTask<Bitmap, Void, Bitmap> {
+
+        private ProgressDialog dialog;
+
+        @Override
+        protected void onPreExecute() {
+            dialog = new ProgressDialog(mContext);
+            dialog.setMessage("Processing...");
+            dialog.setCancelable(false);
+            dialog.show();
+        }
+
+        @Override
+        protected Bitmap doInBackground(Bitmap... params) {
+            return ZhangSuenThinning.process(params[0]);
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap bitmap) {
+            bmpLast = Bitmap.createBitmap(bitmap);
+            setDisplay(bmpLast);
+            imageView.refreshDrawableState();
+            dialog.dismiss();
+        }
+    }
+
+    class MathAsync extends AsyncTask<Bitmap, Void, List<String>> {
+        private ProgressDialog dialog;
+
+        @Override
+        protected void onPreExecute() {
+            dialog = new ProgressDialog(mContext);
+            dialog.setMessage("Processing...");
+            dialog.setCancelable(false);
+            dialog.show();
+        }
+
+        @Override
+        protected List<String> doInBackground(Bitmap... params) {
+            Bitmap bmp;
+            List<String> chars = new ArrayList<>();
+            List<Bitmap> bitmaps;
+            ChainCodeResult chainCodeResult;
+            String checkStr;
+
+            Log.i(TAG, " ");
+            Log.i(TAG, "BEGIN Grayscale");
+            bmp = ImageProcessing.grayscale(params[0]);
+            Log.i(TAG, "END Grayscale");
+
+            Log.i(TAG, " ");
+            Log.i(TAG, "BEGIN Treshold");
+            bmp = ImageProcessing.treshold(bmp);
+            Log.i(TAG, "END Treshold");
+
+            Log.i(TAG, " ");
+            Log.i(TAG, "BEGIN Segment");
+            bitmaps = MathScanner.segment(bmp);
+            Log.i(TAG, "END Segment");
+
+            Log.i(TAG, " ");
+            Log.i(TAG, "BEGIN ChainCode and Detection");
+            for (Bitmap bmp2 : bitmaps) {
+                chainCodeResult = ChainCode.singleObject(bmp2);
+                checkStr = Matcher.process(chainCodeResult.toString());
+                Log.i(TAG, "Result = " + checkStr);
+                chars.add(checkStr);
+            }
+            Log.i(TAG, "END ChainCode and Detection");
+
+            return chars;
+        }
+
+        @Override
+        protected void onPostExecute(List<String> chars) {
+//            for (String myChar : chars) {
+//                Log.i(TAG, myChar);
+//            }
+
+            bmpLast = ZhangSuenThinning.process(bmpOriginal);
+            setDisplay(bmpLast);
+            imageView.refreshDrawableState();
+            dialog.dismiss();
         }
     }
 

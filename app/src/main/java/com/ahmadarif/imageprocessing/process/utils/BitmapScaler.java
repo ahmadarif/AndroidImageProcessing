@@ -1,4 +1,4 @@
-package com.ahmadarif.imageprocessing.process;
+package com.ahmadarif.imageprocessing.process.utils;
 
 import android.graphics.Bitmap;
 

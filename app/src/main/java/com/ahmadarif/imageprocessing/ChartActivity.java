@@ -30,6 +30,7 @@ public class ChartActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chart);
+        setTitle("Detail Colors");
 
         ButterKnife.bind(this);
 
@@ -39,9 +40,9 @@ public class ChartActivity extends AppCompatActivity {
             int r = Color.red(p);
             int g = Color.green(p);
             int b = Color.blue(p);
-            String str = new String(r + "-" + g + "-" + b);
+            String str = new String(r + "," + g + "," + b);
 
-            mBarChart.addBar(new BarModel(entry.getValue(), Color.rgb(r, g, b)));
+            mBarChart.addBar(new BarModel(str, entry.getValue(), Color.rgb(r, g, b)));
         }
 
         mBarChart.startAnimation();

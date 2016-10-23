@@ -22,69 +22,36 @@
             android:layout_gravity="center"
             android:src="@drawable/logo1"/>
 
-        <RelativeLayout
+        <Button
+            android:id="@+id/btnBasicImageProcessing"
+            android:text="Basic Image Processing"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="30dp">
+            android:layout_marginTop="10dp"
+            android:textAllCaps="false"/>
 
-            <Button
-                android:id="@+id/btnGray1"
-                android:text="Gray 1"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentLeft="true"/>
-
-            <Button
-                android:id="@+id/btnGray2"
-                android:text="Gray 2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerHorizontal="true" />
-
-            <Button
-                android:id="@+id/btnTresh"
-                android:text="Tresh"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentRight="true"/>
-
-        </RelativeLayout>
-
-        <RelativeLayout
+        <Button
+            android:id="@+id/btnMath"
+            android:text="Math Scanner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp">
-
-            <Button
-                android:id="@+id/btnCountColor"
-                android:text="Count"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentLeft="true" />
-
-            <Button
-                android:id="@+id/btnGreen"
-                android:text="Green"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerHorizontal="true" />
-
-            <Button
-                android:id="@+id/btnBlue"
-                android:text="blue"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentRight="true" />
-
-        </RelativeLayout>
+            android:layout_marginTop="10dp"
+            android:textAllCaps="false"/>
 
         <Button
             android:id="@+id/btnReset"
-            android:text="Reset"
+            android:text="Reset Image"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@id/btnCountColor"
-            android:layout_marginTop="20dp" />
+            android:layout_marginTop="10dp"
+            android:textAllCaps="false"/>
+
+        <EditText
+            android:id="@+id/txtChainCode"
+            android:visibility="gone"
+            android:editable="false"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
 
     </LinearLayout>
 
