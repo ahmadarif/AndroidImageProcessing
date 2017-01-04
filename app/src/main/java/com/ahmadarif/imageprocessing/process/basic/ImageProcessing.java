@@ -85,4 +85,97 @@ public class ImageProcessing {
 
         return colors;
     }
+
+    public static int[] imageHistogram(Bitmap input) {
+        int[] histogram = new int[256];
+
+        for(int i=0; i<histogram.length; i++) histogram[i] = 0;
+
+        for(int i=0; i<input.getWidth(); i++) {
+            for(int j=0; j<input.getHeight(); j++) {
+                int red = Color.red(input.getPixel(i, j));
+                histogram[red]++;
+            }
+        }
+
+        return histogram;
+    }
+
+    // Get binary treshold using Otsu's method
+    private static int otsuValue(Bitmap original) {
+        int[] histogram = imageHistogram(grayscale(original));
+        int total = original.getHeight() * original.getWidth();
+
+        float sum = 0;
+        for(int i=0; i<256; i++) {
+            sum += i * histogram[i];
+        }
+
+        float sumB = 0;
+        int wB = 0;
+        int wF = 0;
+
+        float varMax = 0;
+        int threshold = 0;
+
+        for(int i=0 ; i<256 ; i++) {
+            wB += histogram[i];
+            if(wB == 0) continue;
+            wF = total - wB;
+
+            if(wF == 0) break;
+
+            sumB += (float) (i * histogram[i]);
+            float mB = sumB / wB;
+            float mF = (sum - sumB) / wF;
+
+            float varBetween = (float) wB * (float) wF * (mB - mF) * (mB - mF);
+
+            if(varBetween > varMax) {
+                varMax = varBetween;
+                threshold = i;
+            }
+        }
+
+        return threshold;
+    }
+
+    /**
+     * Melakukan proses binarization citra menggunakan Algoritma Otsu
+     * @param original
+     * @param usingAlpha
+     * @return
+     */
+    public static Bitmap otsuThreshold(Bitmap original, boolean usingAlpha) {
+        int red;
+        int newPixel;
+
+        int threshold = otsuValue(original);
+
+        Bitmap binarized = Bitmap.createBitmap(original.getWidth(), original.getHeight(), original.getConfig());
+
+        for(int i=0; i<original.getWidth(); i++) {
+            for(int j=0; j<original.getHeight(); j++) {
+
+                // Get pixels
+                red = Color.red(original.getPixel(i, j));
+                int alpha = Color.alpha(original.getPixel(i, j));
+
+                if(red > threshold) {
+                    newPixel = 255;
+                }
+                else {
+                    newPixel = 0;
+                }
+
+                if (usingAlpha) {
+                    binarized.setPixel(i, j, Color.argb(alpha, newPixel, newPixel, newPixel));
+                } else {
+                    binarized.setPixel(i, j, Color.rgb(newPixel, newPixel, newPixel));
+                }
+            }
+        }
+
+        return binarized;
+    }
 }

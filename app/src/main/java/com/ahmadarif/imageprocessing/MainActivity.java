@@ -20,6 +20,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 
+import com.ahmadarif.imageprocessing.process.basic.AverageFilter;
 import com.ahmadarif.imageprocessing.process.basic.ImageProcessing;
 import com.ahmadarif.imageprocessing.process.chaincode.ChainCode;
 import com.ahmadarif.imageprocessing.process.chaincode.ChainCodeResult;
@@ -54,6 +55,9 @@ public class MainActivity extends AppCompatActivity {
     private static final int SCALE_WIDTH = 600;
     private static final int SCALE_HEIGHT = 840;
 
+    @BindView(R.id.btnTest)
+    Button buttonTest;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -71,18 +75,21 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.btnBasicImageProcessing)
     void btnBasicImageProcClicked() {
-        final CharSequence colors[] = new CharSequence[] {"Grayscale", "Treshold", "Number of Colors", "Chain Code", "Thinning"};
+        final CharSequence colors[] = new CharSequence[] {"Number of Colors", "Grayscale", "Treshold", "Chain Code", "Thinning", "Otsu Treshold", "Average Filter"};
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Choose");
         builder.setItems(colors, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                if (which == 0 || which == 1 || which == 2)
-                    new BasicAsync(which).execute(bmpOriginal);
-                else if (which == 3)
+                String choosedName = colors[which].toString();
+
+                if (choosedName.equalsIgnoreCase("Chain Code")) {
                     new ChainCodeAsync().execute(bmpOriginal);
-                else if (which == 4)
+                } else if (choosedName.equalsIgnoreCase("Thinning")) {
                     new ThinningAsync().execute(bmpOriginal);
+                } else {
+                    new BasicAsync(choosedName).execute(bmpOriginal);
+                }
             }
         });
         builder.show();
@@ -157,12 +164,12 @@ public class MainActivity extends AppCompatActivity {
 
         private ProgressDialog dialog;
 
-        private int optionIndex;
+        private String optionName;
         private Map<Integer, Integer> colors;
 
         // bisa custom passing parameter
-        BasicAsync(int optionIndex) {
-            this.optionIndex = optionIndex;
+        BasicAsync(String optionName) {
+            this.optionName = optionName;
         }
 
         @Override
@@ -181,16 +188,22 @@ public class MainActivity extends AppCompatActivity {
             /* algoritma */
 
             // proses sesuai dengan id tombol tombol yang ditekan
-            switch (optionIndex) {
-                case 0:
+            switch (optionName) {
+                case "Grayscale":
                     result = ImageProcessing.grayscale(params[0]);
                     break;
-                case 1:
+                case "Treshold":
                     result = ImageProcessing.treshold(params[0]);
                     break;
-                case 2:
+                case "Number of Colors":
                     colors = ImageProcessing.countColor(bmpLast);
                     result = Bitmap.createBitmap(bmpLast);
+                    break;
+                case "Otsu Treshold":
+                    result = ImageProcessing.otsuThreshold(params[0], false);
+                    break;
+                case "Average Filter":
+                    result = AverageFilter.process(params[0], 1);
                     break;
             }
 
@@ -203,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
             setDisplay(bmpLast);
             dialog.dismiss();
 
-            if (optionIndex == 2) {
+            if (optionName.equalsIgnoreCase("Number of Colors")) {
                 new AlertDialog.Builder(mContext)
                     .setTitle("Status")
                     .setMessage("Color count = " + colors.size())
@@ -341,6 +354,18 @@ public class MainActivity extends AppCompatActivity {
             imageView.refreshDrawableState();
             dialog.dismiss();
         }
+    }
+
+    @OnClick(R.id.btnTest)
+    void buttonTestClick() {
+        int[][] img = {
+            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+            {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+        };
     }
 
 }

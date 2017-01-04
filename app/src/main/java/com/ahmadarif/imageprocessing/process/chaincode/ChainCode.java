@@ -3,16 +3,12 @@ package com.ahmadarif.imageprocessing.process.chaincode;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Point;
-import android.util.Log;
 
 import com.ahmadarif.imageprocessing.process.basic.ImageProcessing;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by ARIF on 19-Sep-16.
- */
 public class ChainCode {
 
     private static final String TAG = "ChainCode";
@@ -49,12 +45,12 @@ public class ChainCode {
         while(!isStop) {
             Point[] points = new Point[8];
             points[0] = new Point(pointCurr.x + 1, pointCurr.y); // kanan
-            points[1] = new Point(pointCurr.x, pointCurr.y - 1); // atas
-            points[2] = new Point(pointCurr.x - 1, pointCurr.y); // kiri
-            points[3] = new Point(pointCurr.x, pointCurr.y + 1); // bawah
-            points[4] = new Point(pointCurr.x + 1, pointCurr.y - 1); // kanan atas
-            points[5] = new Point(pointCurr.x - 1, pointCurr.y - 1); // kiri atas
-            points[6] = new Point(pointCurr.x - 1, pointCurr.y + 1); // kiri bawah
+            points[1] = new Point(pointCurr.x + 1, pointCurr.y - 1); // kanan atas
+            points[2] = new Point(pointCurr.x, pointCurr.y - 1); // atas
+            points[3] = new Point(pointCurr.x - 1, pointCurr.y - 1); // kiri atas
+            points[4] = new Point(pointCurr.x - 1, pointCurr.y); // kiri
+            points[5] = new Point(pointCurr.x - 1, pointCurr.y + 1); // kiri bawah
+            points[6] = new Point(pointCurr.x, pointCurr.y + 1); // bawah
             points[7] = new Point(pointCurr.x + 1, pointCurr.y + 1); // kanan bawah
 
             // cek calon pointCurrent yang baru
@@ -117,5 +113,19 @@ public class ChainCode {
             case 6 : return 5;
             default: return 7;
         }
+    }
+
+
+    // =============================================================================================
+    // untuk memproses array 2D
+    // =============================================================================================
+    public static List<Integer> singleObject(int[][] image) {
+        /* kamus */
+        List<Integer> hasil = new ArrayList<>();
+
+        /* algoritma */
+
+
+        return hasil;
     }
 }
